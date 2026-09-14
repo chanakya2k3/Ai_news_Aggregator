@@ -1,0 +1,14 @@
+# YouTube channels to follow.
+#
+# Paste any channel link as `url`. All of these work:
+#   https://www.youtube.com/@AndrejKarpathy
+#   https://www.youtube.com/channel/UCXUPKJO5MZQN11PqgIvyuvQ
+#   https://www.youtube.com/c/SomeName    or    https://www.youtube.com/user/SomeName
+#   @AndrejKarpathy
+# Video links (watch?v=..., youtu.be/...) are not channel links and will be rejected.
+#
+# `tags` is optional. Comment out an entry with # to pause it.
+
+[[channels]]
+url = "https://www.youtube.com/@AndrejKarpathy"
+tags = ["llm"]

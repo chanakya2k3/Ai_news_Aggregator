@@ -1,0 +1,29 @@
+[project]
+name = "ai-news-aggregator"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "pydantic>=2.13.5",
+    "tzdata>=2026.4",
+]
+
+[project.scripts]
+ai-news-aggregator = "ai_news_aggregator:main"
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "respx>=0.23.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
