@@ -1,0 +1,14 @@
+{{ title }}
+{{ video_count }} new video{{ '' if video_count == 1 else 's' }} from {{ channel_count }} channel{{ '' if channel_count == 1 else 's' }} - {{ generated_at }}
+
+{% for group in groups %}
+== {{ group.channel.title }}{% if group.channel.tags %} [{{ group.channel.tags | join(', ') }}]{% endif %}
+
+{% for video in group.videos %}  - {{ video.title }}
+    {{ video.url }}
+    {{ video.published_local }}{% if video.views is not none %} - {{ '{:,}'.format(video.views) }} views{% endif %}
+
+{% if video.summary %}    {{ video.summary }}
+{% endif %}{% endfor %}
+{% endfor %}
+Sent by your local AI News Aggregator.

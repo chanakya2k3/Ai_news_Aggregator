@@ -13,3 +13,6 @@ wheels/
 .env
 .cache/
 .pytest_cache/
+
+# Digest previews
+out/

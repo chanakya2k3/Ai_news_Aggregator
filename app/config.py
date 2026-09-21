@@ -30,6 +30,19 @@ class Settings(BaseSettings):
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "qwen3:8b"
 
+    # Email
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    email_from: str = ""
+    email_to: str = ""
+
+    @property
+    def email_configured(self) -> bool:
+        """True once .env has enough filled in to actually send mail."""
+        return bool(self.smtp_host and self.smtp_user and self.smtp_password and self.email_to)
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy connection string, e.g. postgresql+psycopg://user:pass@localhost:5432/ai_news"""
