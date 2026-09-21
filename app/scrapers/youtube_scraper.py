@@ -7,6 +7,7 @@ Run from the project root:
 
 import argparse
 import sys
+import time
 import tomllib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -26,6 +27,8 @@ from app.scrapers.youtube_resolver import (
 FEED_URL = YOUTUBE_BASE + "/feeds/videos.xml"
 DEFAULT_CHANNELS_FILE = Path("channels.toml")
 DEFAULT_CACHE_FILE = Path(".cache/channel_ids.json")
+FEED_ATTEMPTS = 4  # YouTube's feed answers 404/500 at random; retry before believing it
+FEED_RETRY_DELAY = 1.0  # seconds, multiplied by the attempt number
 
 
 class FeedError(Exception):
@@ -88,16 +91,33 @@ class YouTubeScraper:
         self._client = client
         self._resolver = resolver
 
-    def fetch_channel_videos(self, channel_id: str) -> tuple[str, list[Video]]:
-        try:
-            response = self._client.get(FEED_URL, params={"channel_id": channel_id})
-        except httpx.HTTPError as exc:
-            raise FeedError(f"Could not reach the feed for {channel_id}: {exc}") from exc
-        if response.status_code == 404:
-            raise FeedError(f"No feed for channel {channel_id} (channel removed or ID wrong)")
-        if response.status_code != 200:
-            raise FeedError(f"YouTube returned HTTP {response.status_code} for the feed of {channel_id}")
-        return parse_feed(response.text, channel_id)
+    def fetch_channel_videos(self, channel_id: str, attempts: int = FEED_ATTEMPTS) -> tuple[str, list[Video]]:
+        """Fetch and parse a channel's feed.
+
+        YouTube serves this feed unreliably: the same channel can answer 500 or
+        404 one second and 200 the next, so a failing status is retried before
+        we treat it as real.
+        """
+        last_status = None
+        for attempt in range(1, attempts + 1):
+            try:
+                response = self._client.get(FEED_URL, params={"channel_id": channel_id})
+            except httpx.HTTPError as exc:
+                raise FeedError(f"Could not reach the feed for {channel_id}: {exc}") from exc
+
+            if response.status_code == 200:
+                return parse_feed(response.text, channel_id)
+
+            last_status = response.status_code
+            if attempt < attempts:
+                time.sleep(FEED_RETRY_DELAY * attempt)  # 1s, 2s, 3s...
+
+        if last_status == 404:
+            raise FeedError(
+                f"No feed for channel {channel_id} after {attempts} tries "
+                "(channel removed, ID wrong, or YouTube is rate limiting this IP)"
+            )
+        raise FeedError(f"YouTube returned HTTP {last_status} for the feed of {channel_id} after {attempts} tries")
 
     def scrape_channel(self, config: ChannelConfig, since: datetime | None = None) -> ChannelResult:
         try:

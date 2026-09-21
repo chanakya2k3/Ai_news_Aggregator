@@ -9,6 +9,12 @@ from app.scrapers.models import ChannelConfig
 from app.scrapers.youtube_resolver import ChannelResolver
 from app.scrapers.youtube_scraper import FEED_URL, YouTubeScraper, load_channel_configs, parse_feed
 
+@pytest.fixture(autouse=True)
+def no_retry_delay(monkeypatch):
+    """Keep the feed retries instant so tests don't sit waiting."""
+    monkeypatch.setattr("app.scrapers.youtube_scraper.FEED_RETRY_DELAY", 0)
+
+
 FIXTURES = Path(__file__).parent / "fixtures"
 FEED_XML = (FIXTURES / "feed.xml").read_text(encoding="utf-8")
 CHANNEL_ID = "UCaaaaaaaaaaaaaaaaaaaaaa"
@@ -68,10 +74,25 @@ def test_scrape_filters_by_date_and_isolates_failures():
 
 @respx.mock
 def test_scrape_reports_http_errors():
-    respx.get(FEED_URL).mock(return_value=httpx.Response(500))
+    route = respx.get(FEED_URL).mock(return_value=httpx.Response(500))
     with httpx.Client() as client:
         result = YouTubeScraper(client, ChannelResolver(client)).scrape_channel(ChannelConfig(url=CHANNEL_ID))
-    assert result.error == f"YouTube returned HTTP 500 for the feed of {CHANNEL_ID}"
+    assert result.error == f"YouTube returned HTTP 500 for the feed of {CHANNEL_ID} after 4 tries"
+    assert route.call_count == 4
+
+
+@respx.mock
+def test_retries_flaky_feed_until_it_works():
+    """YouTube answers 404/500 at random for feeds that do exist."""
+    route = respx.get(FEED_URL).mock(
+        side_effect=[httpx.Response(500), httpx.Response(404), httpx.Response(200, text=FEED_XML)]
+    )
+    with httpx.Client() as client:
+        result = YouTubeScraper(client, ChannelResolver(client)).scrape_channel(ChannelConfig(url=CHANNEL_ID))
+
+    assert result.ok
+    assert len(result.videos) == 2
+    assert route.call_count == 3
 
 
 def test_missing_channels_file(tmp_path):
