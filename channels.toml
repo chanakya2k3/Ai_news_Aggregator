@@ -12,3 +12,7 @@
 [[channels]]
 url = "https://www.youtube.com/@AndrejKarpathy"
 tags = ["llm"]
+
+[[channels]]
+url = "https://www.youtube.com/@BBCNews"
+tags = ["news"]

@@ -1,0 +1,33 @@
+# Local PostgreSQL for the news aggregator.
+#
+#   docker compose -f docker/compose.yaml up -d      start
+#   docker compose -f docker/compose.yaml ps         status
+#   docker compose -f docker/compose.yaml logs -f    logs
+#   docker compose -f docker/compose.yaml down       stop (data is kept)
+#
+# Values come from the .env file in the project root.
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ai_news_db
+    restart: unless-stopped
+    # env_file passes POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB into the
+    # container. Don't repeat them under `environment:` with ${...}: that form is
+    # substituted from the shell or from a .env next to this file, not from ../.env.
+    env_file:
+      - ../.env
+    ports:
+      # 127.0.0.1 keeps the database reachable from this PC only, not the network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
